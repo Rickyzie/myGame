@@ -13,6 +13,9 @@ class imageRender {
     this.sHeight = sHeight;
     this.image = new Image();
     this.image.src = imageSrc;
+    this.innitialsPositionX =  this.sPosition.x;
+    this.innitialCount = 1;
+
   };
   drawImg() {
     c.drawImage(
@@ -26,30 +29,28 @@ class imageRender {
       this.dWidth,
       this.dHeight)
   };
-  refresh(count,imgSlice,time ){
-    this.count = count;
-    let i=1;
-    this.innitialsPositionX =  this.sPosition.x;
-    setInterval(()=>{
-      this.sPosition.x+=imgSlice;
-      i++;      
-      if(i==count){
+  refresh({framesMax,imgSlice,imageSrc}){
+    this.image.src = imageSrc;
+    this.framesMax = framesMax;
+    this.innitialCount++;
+    this.sPosition.x+=200;
+      if(this.innitialCount>=this.framesMax){
         this.sPosition.x=this.innitialsPositionX;
-        i=1;
+        this.innitialCount=1;
       };
-    }, time);
   };
 };
 
-const gravity = 0.1;
+const gravity = 1;
 class Sprite extends imageRender {
   constructor({imageSrc, sPosition, sWidth, sHeight, dPosition, dWidth, dHeight}) {
     super({imageSrc, sPosition, sWidth, sHeight, dPosition, dWidth, dHeight })
     this.key = {};
     this.jumpCounter = 2;
     this.height = 150;
-    this.attacking = false;
     this.health = 100;
+    this.characterStatus = "idle"
+    this.flying = false;
     this.velocity = {
       x: 0,
       y: 0
@@ -82,23 +83,25 @@ class Sprite extends imageRender {
 
         case left:
           this.key[left].pressed = true;
-          this.lastKey = left;
+          this.lastKey = left;          
           break;
 
         case attacking:
+          this.sPosition.x=this.innitialsPositionX;
+          this.innitialCount=1;
           this.key[attacking].pressed = true;
-          setTimeout(() => {
+          if(this.innitialCount>=this.framesMax){
             this.key[attacking].pressed = false;
-          }, 1000);
+          };
           break;
         case up:
-          this.sPosition.x=this.innitialsPositionX;
-          this.count = 3;
           if (this.jumpCounter <= 0) {
             this.velocity.y += 0;
           } else {
+            this.characterStatus = "jump";
+            this.flying = true ;
             this.jumpCounter -= 1;
-            this.velocity.y = -7;
+            this.velocity.y = -20;
           };
           break;
       };
@@ -108,11 +111,9 @@ class Sprite extends imageRender {
       switch (e.key) {
         case right:
           this.key[right].pressed = false;
-          this.image.src =  "img/samuraiMack/idle.png";
           break;
         case left:
           this.key[left].pressed = false;
-          this.image.src =  "img/samuraiMack/idle.png";
           break;
 
       };
@@ -124,10 +125,6 @@ class Sprite extends imageRender {
     this.drawImg();
     //attackBox
     if (this.key[this.attacking].pressed) {
-      this.count = 1;
-      this.sPosition.x = this.innitialsPositionX;
-      this.image.src =  "img/samuraiMack/Attack1.png";
-      this.key[this.attacking].pressed = false;
       if (this.lastKey === this.right) {
         this.attackBox.width = 100;
         c.fillStyle = "green";
@@ -141,11 +138,30 @@ class Sprite extends imageRender {
   };
 
   update(){
+    if(this.velocity.x>1&&this.flying == false&&this.key[this.attacking].pressed==false){
+      this.characterStatus = "run";
+    };
+    if(this.velocity.x<-1&&this.flying == false&&this.key[this.attacking].pressed==false){
+      this.characterStatus = "run";
+    };
+    if(this.velocity.x==0&&this.flying == false&&this.key[this.attacking].pressed==false){
+      this.characterStatus = "idle";
+    };
+    if(this.velocity.y<0&&this.flying == true&&this.key[this.attacking].pressed==false){
+      this.characterStatus = "jump";
+    };
+    if(this.velocity.y>0&&this.flying == true&&this.key[this.attacking].pressed==false){
+      this.characterStatus = "fall";
+    };
+    if(this.key[this.attacking].pressed){
+      this.characterStatus = "attack1";
+    };
     this.dPosition.x += this.velocity.x;
     this.dPosition.y += this.velocity.y;
     if (this.dPosition.y + this.height + this.velocity.y >= canvas.height - 162) {
       this.velocity.y = 0;
       this.jumpCounter = 2;
+      this.flying = false;
     } else {
       this.velocity.y += gravity;
     };
@@ -160,11 +176,9 @@ class Sprite extends imageRender {
       this.velocity.x = 0;
     };
     if (this.key[this.right].pressed && this.lastKey === this.right) {
-      this.image.src =  "img/samuraiMack/run.png";
-      this.velocity.x = 2.5;
+      this.velocity.x = 10;
     } else if (this.key[this.left].pressed && this.lastKey === this.left) {
-      this.image.src =  "img/samuraiMack/run.png";
-      this.velocity.x = -2.5;
+      this.velocity.x = -10;
     };
   };
 };
@@ -217,7 +231,6 @@ const player = new Sprite({
   }
 );
 player.setButton("w", "s", "a", "d", "s")
-player.refresh(8,200,50)
 
 const enemy = new Sprite({
   sPosition: {
@@ -241,7 +254,6 @@ const enemy = new Sprite({
 }
 );
 enemy.setButton("ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowDown")
-enemy.refresh(4,200,200)
 
 let shop = new imageRender({
   sPosition: {
@@ -258,7 +270,6 @@ let shop = new imageRender({
   dHeight: 384,
   imageSrc: "./img/shop.png",
 });
-shop.refresh(6,shop.sWidth,100)
 
 let background = new imageRender({
   sPosition: {
@@ -276,23 +287,6 @@ let background = new imageRender({
   imageSrc: "./img/background.png",
 });
 
-
-animate = () => {
-  window.requestAnimationFrame(animate);
-
-  background.drawImg()
-  shop.drawImg()
-
-  player.update()
-  player.setVelocity()
-  player.draw()
-  enemy.update()
-  enemy.setVelocity()
-  enemy.draw()
-  
-};
-animate()
-
 let timer = 999;
 decreaseTimer = () => {
   setTimeout(decreaseTimer, 1000);
@@ -302,3 +296,103 @@ decreaseTimer = () => {
   };
 };
 decreaseTimer()
+
+kenjiSprites = (characterStatus) => {
+  switch (characterStatus) {
+    case "idle": 
+      return{
+        imageSrc: './img/kenji/Idle.png',
+        framesMax: 4
+      };
+    case "run": 
+      return{
+        imageSrc: './img/kenji/Run.png',
+        framesMax: 8
+      };
+    case "jump": 
+      return{
+        imageSrc: './img/kenji/Jump.png',
+        framesMax: 3
+      };
+    case "fall": 
+      return{
+        imageSrc: './img/kenji/Fall.png',
+        framesMax: 3
+      };
+    case "attack1": 
+      return{
+        imageSrc: './img/kenji/Attack1.png',
+        framesMax: 4
+      };
+    case "takeHit": 
+      return{
+        imageSrc: './img/kenji/Take Hit - white silhouette.png',       
+        framesMax: 4
+        };
+     case "death": 
+      return{
+        imageSrc: './img/kenji/Death.png',
+        framesMax: 6
+      };
+  };
+};
+
+samuraiMackSprites = (characterStatus) => {
+  switch (characterStatus) {
+    case "idle": 
+      return{
+        imageSrc: './img/samuraiMack/Idle.png',
+        framesMax: 8
+      };
+    case "run": 
+      return{
+        imageSrc: './img/samuraiMack/Run.png',
+        framesMax: 8
+      };
+    case "jump": 
+      return{
+        imageSrc: './img/samuraiMack/Jump.png',
+        framesMax: 3
+      };
+    case "fall": 
+      return{
+        imageSrc: './img/samuraiMack/Fall.png',
+        framesMax: 3
+      };
+    case "attack1": 
+      return{
+        imageSrc: './img/samuraiMack/Attack1.png',
+        framesMax: 6
+      };
+    case "takeHit": 
+      return{
+        imageSrc: './img/samuraiMack/Take Hit - white silhouette.png',       
+        framesMax: 4
+        };
+     case "death": 
+      return{
+        imageSrc: './img/samuraiMack/Death.png',
+        framesMax: 6
+      };
+  };
+};
+
+animate = () => {
+  setTimeout(()=>window.requestAnimationFrame(animate) , 30)
+
+  background.drawImg()
+  shop.drawImg()
+
+
+  player.update()
+  player.setVelocity()
+  player.draw()
+  player.refresh(samuraiMackSprites(player.characterStatus))
+  enemy.update()
+  enemy.setVelocity()
+  enemy.draw()
+  enemy.refresh(kenjiSprites(enemy.characterStatus))
+
+  
+};
+animate()
