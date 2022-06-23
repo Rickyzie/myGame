@@ -90,9 +90,7 @@ class Sprite extends imageRender {
           this.sPosition.x=this.innitialsPositionX;
           this.innitialCount=1;
           this.key[attacking].pressed = true;
-          if(this.innitialCount>=this.framesMax){
-            this.key[attacking].pressed = false;
-          };
+         
           break;
         case up:
           if (this.jumpCounter <= 0) {
@@ -121,19 +119,33 @@ class Sprite extends imageRender {
   };
 
   draw(){
-    //c.fillRect(this.dPosition.x, this.dPosition.y, 115, 150);
+    //c.fillStyle = "black";
+    //c.fillRect(this.dPosition.x, this.dPosition.y, 220, 200);
     this.drawImg();
     //attackBox
+  };
+
+  setAttackBox(x,y){
     if (this.key[this.attacking].pressed) {
-      if (this.lastKey === this.right) {
-        this.attackBox.width = 100;
-        c.fillStyle = "green";
-        c.fillRect(this.attackBox.dPosition.x, this.attackBox.dPosition.y, this.attackBox.width, this.attackBox.height);
-      } else if (this.lastKey === this.left) {
-        this.attackBox.width = -50;
-        c.fillStyle = "green";
-        c.fillRect(this.attackBox.dPosition.x, this.attackBox.dPosition.y, this.attackBox.width, this.attackBox.height);
+      this.attackBox.dPosition = {
+        x : this.dPosition.x+x,
+        y : this.dPosition.y+y
       };
+      this.attackBox.width = 130;
+      this.attackBox.height = 200;
+      //c.fillStyle = "green";
+      //c.fillRect(this.attackBox.dPosition.x, this.attackBox.dPosition.y, this.attackBox.width, this.attackBox.height);
+    };
+  };
+
+  setHitBox(x,y){
+
+    if (this.key[this.attacking].pressed) {
+      
+      this.attackBox.width = 130;
+      this.attackBox.height = 200;
+      c.fillStyle = "green";
+      c.fillRect(this.dPosition.x+x, this.dPosition.y+y, this.attackBox.width, this.attackBox.height);
     };
   };
 
@@ -156,6 +168,11 @@ class Sprite extends imageRender {
     if(this.key[this.attacking].pressed){
       this.characterStatus = "attack1";
     };
+
+    if(this.innitialCount>=this.framesMax-1){
+      this.key[this.attacking].pressed = false;
+    };
+
     this.dPosition.x += this.velocity.x;
     this.dPosition.y += this.velocity.y;
     if (this.dPosition.y + this.height + this.velocity.y >= canvas.height - 162) {
@@ -184,26 +201,30 @@ class Sprite extends imageRender {
 };
 
 judgeCollision = (objOne, objTwo) => (
-  objOne.dPosition.x + objOne.attackBox.width >= objTwo.dPosition.x &&
-  objOne.dPosition.x + objOne.attackBox.width <= objTwo.dPosition.x + objTwo.dWidth &&
-  objOne.dPosition.y + (objOne.attackBox.height) / 2 >= objTwo.dPosition.y &&
-  objOne.dPosition.y + (objOne.attackBox.height / 2) <= objTwo.dPosition.y + objTwo.dHeight
+  objOne.attackBox.dPosition.x + (objOne.attackBox.width) >= objTwo.dPosition.x+objTwo.attackBox.width&
+  objOne.attackBox.dPosition.x + (objOne.attackBox.width) <= objTwo.dPosition.x + objTwo.dWidth &&
+  objOne.attackBox.dPosition.y + (objOne.attackBox.height) / 2 >= objTwo.dPosition.y &&
+  objOne.attackBox.dPosition.y + (objOne.attackBox.height / 2) <= objTwo.dPosition.y + objTwo.dHeight
 );
 
 successfulCollision = (objOne, attacking, attacked, objTwo) => {
   if (objOne.key[attacking].pressed) {
+    console.log(objOne.attackBox.dPosition.x + objOne.attackBox.width , objTwo.dPosition.x+objTwo.attackBox.width )
+    console.log(objOne.attackBox.dPosition.x + objOne.attackBox.width , objTwo.dPosition.x + objTwo.dWidth )
+    console.log(objOne.attackBox.dPosition.y + (objOne.attackBox.height) / 2  , objTwo.dPosition.y )
+    console.log(objOne.attackBox.dPosition.y + (objOne.attackBox.height / 2) , objTwo.dPosition.y + objTwo.dHeight )
     if (judgeCollision(objOne, objTwo)) {
       objOne.health -= 5
       document.querySelector("#objTwo").style.width = objOne.health + "%";
-      objOne.key[attacking].pressed = false;
     };
   };
 
   if (objTwo.key[attacked].pressed) {
+    console.log(objOne.attackBox.dPosition.x + objOne.attackBox.width , objTwo.dPosition.x+objTwo.attackBox.width )
+
     if (judgeCollision(objTwo, objOne)) {
       objTwo.health -= 5
       document.querySelector("#objOne").style.width = objTwo.health + "%";
-      objTwo.key[attacked].pressed = false;
     };
   };
 };
@@ -378,21 +399,22 @@ samuraiMackSprites = (characterStatus) => {
 };
 
 animate = () => {
-  setTimeout(()=>window.requestAnimationFrame(animate) , 30)
+  setTimeout(()=>window.requestAnimationFrame(animate) , 40)
 
   background.drawImg()
   shop.drawImg()
-
 
   player.update()
   player.setVelocity()
   player.draw()
   player.refresh(samuraiMackSprites(player.characterStatus))
+  player.setAttackBox(90,0)
   enemy.update()
   enemy.setVelocity()
   enemy.draw()
   enemy.refresh(kenjiSprites(enemy.characterStatus))
-
+  enemy.setAttackBox(0,0)
+  successfulCollision (player, "s", "ArrowDown", enemy)
   
 };
 animate()
